@@ -21,19 +21,22 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      padding: 24px 16px;
+      padding: clamp(12px, 4vw, 24px);
       background: radial-gradient(circle at top, #24375f, #0b0f19 65%);
       color: inherit;
       touch-action: manipulation;
     }
 
     .shell {
-      width: min(92vw, 520px);
+      width: 100%;
+      max-width: 520px;
       background: #0f1727;
       border-radius: 28px;
-      padding: 30px 26px 36px;
+      padding: clamp(18px, 4vw, 36px);
       box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
       overflow: hidden;
+      box-sizing: border-box;
+      margin: 0 auto;
     }
 
     h1,
@@ -221,6 +224,13 @@
       transition: transform 0.15s ease, box-shadow 0.15s ease;
     }
 
+    .problem-cell.completed {
+      background: linear-gradient(135deg, #ff4d4f, #b30021);
+      color: #fff;
+      box-shadow: 0 0 10px rgba(255, 77, 79, 0.4);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
     .problem-cell:active {
       transform: scale(0.96);
     }
@@ -280,8 +290,8 @@
     }
 
     .puzzle-wrapper {
-      width: min(90vw, 420px);
-      height: min(90vw, 420px);
+      width: min(100%, 420px);
+      aspect-ratio: 1 / 1;
       margin: 10px auto 0;
       position: relative;
     }
@@ -510,6 +520,7 @@
         { files: [], imagesByNumber: new Map(), loaded: false, loading: false },
       ])
     );
+    const solvedProblems = new Map(DIFFICULTIES.map(({ id }) => [id, new Set()]));
 
     let currentImage = "";
     let currentProblemNumber = null;
@@ -659,6 +670,7 @@
 
       if (solved) {
         status.textContent = "";
+        markProblemSolved(currentDifficultyId, currentProblemNumber);
         showCompletionPanel();
       }
     }
@@ -808,6 +820,9 @@
         cell.dataset.size = difficulty.size;
         cell.dataset.problemNumber = i;
         cell.dataset.difficulty = difficulty.id;
+        if (solvedProblems.get(difficulty.id)?.has(i)) {
+          cell.classList.add("completed");
+        }
         cell.textContent = `${i}`;
         difficultyGrid.appendChild(cell);
       }
@@ -880,6 +895,33 @@
         }
       }
       return null;
+    }
+
+    function markProblemSolved(difficultyId, problemNumber) {
+      if (!difficultyId || !problemNumber) {
+        return;
+      }
+
+      const solvedSet = solvedProblems.get(difficultyId);
+      if (!solvedSet) {
+        return;
+      }
+
+      solvedSet.add(problemNumber);
+      updateProblemCellState(difficultyId, problemNumber);
+    }
+
+    function updateProblemCellState(difficultyId, problemNumber) {
+      if (!difficultyGrid || activeDifficultyId !== difficultyId) {
+        return;
+      }
+
+      const cell = difficultyGrid.querySelector(
+        `.problem-cell[data-difficulty="${difficultyId}"][data-problem-number="${problemNumber}"]`
+      );
+      if (cell) {
+        cell.classList.add("completed");
+      }
     }
 
     function showCompletionPanel() {
