@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Skyline Puzzle Quest</title>
+  <style>
+    :root {
+      font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+      color: #0f1b2b;
+      background-color: #0e1117;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 24px 16px;
+      background: radial-gradient(circle at top, #24375f, #0b0f19 65%);
+      color: inherit;
+      touch-action: manipulation;
+    }
+
+    .shell {
+      width: min(92vw, 520px);
+      background: #0f1727;
+      border-radius: 28px;
+      padding: 30px 26px 36px;
+      box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
+      overflow: hidden;
+    }
+
+    h1,
+    h2 {
+      margin: 0;
+      letter-spacing: 0.05em;
+    }
+
+    p {
+      margin: 0;
+      line-height: 1.6;
+    }
+
+    .screen {
+      display: none;
+      animation: fade 0.4s ease;
+    }
+
+    .screen.active {
+      display: block;
+    }
+
+    @keyframes fade {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .eyebrow {
+      text-transform: uppercase;
+      letter-spacing: 0.28em;
+      font-size: 0.75rem;
+      color: #7db9ff;
+      margin-bottom: 12px;
+    }
+
+    button {
+      font-size: clamp(16px, 4vw, 22px);
+      padding: 12px 22px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.12s ease, background 0.2s ease;
+      touch-action: manipulation;
+      font-weight: 600;
+    }
+
+    button:active {
+      transform: scale(0.96);
+    }
+
+    .difficulty {
+      width: 100%;
+      background: #192542;
+      color: #f0f4ff;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    }
+
+    .difficulty.active {
+      background: #0b82ff;
+      box-shadow: 0 10px 18px rgba(11, 130, 255, 0.38);
+    }
+
+    .title-image {
+      width: 100%;
+      height: auto;
+      margin-bottom: 20px;
+      display: block;
+      background: transparent;
+    }
+
+    .rule-card {
+      background: rgba(12, 20, 40, 0.9);
+      border-radius: 18px;
+      padding: 18px 20px;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+      color: #dee6ff;
+    }
+
+    .rule-card h2 {
+      margin-bottom: 10px;
+      font-size: clamp(18px, 4vw, 22px);
+      color: #ffffff;
+    }
+
+    .rule-card ol {
+      margin: 0;
+      padding-left: 20px;
+      color: #d9e5ff;
+      font-size: clamp(14px, 3.5vw, 17px);
+    }
+
+    .difficulty-section {
+      margin-top: 26px;
+    }
+
+    .difficulty-section h2 {
+      margin-bottom: 8px;
+      font-size: clamp(18px, 4vw, 22px);
+      color: #ffffff;
+    }
+
+    .difficulty-section .hint {
+      color: #cbd8ff;
+    }
+
+    .difficulty-tabs {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin: 18px 0 8px;
+    }
+
+    .rank-button {
+      width: 100%;
+      background: #131a2c;
+      color: #e2e8ff;
+      border-radius: 16px;
+      padding: 16px 20px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      text-align: left;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: clamp(16px, 4vw, 20px);
+      font-weight: 600;
+    }
+
+    .rank-button.active {
+      background: #0b82ff;
+      border-color: rgba(11, 130, 255, 0.6);
+      box-shadow: 0 10px 20px rgba(11, 130, 255, 0.35);
+    }
+
+    .problem-set {
+      display: none;
+      background: rgba(12, 17, 32, 0.95);
+      border-radius: 22px;
+      padding: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+    }
+
+    .problem-set.active {
+      display: block;
+    }
+
+    .problem-set h3 {
+      margin: 0 0 6px;
+      font-size: clamp(19px, 4.5vw, 24px);
+    }
+
+    .problem-set p {
+      margin-bottom: 12px;
+      color: #93a4cf;
+      font-size: clamp(14px, 3.5vw, 16px);
+    }
+
+    .problem-grid {
+      --rank-size: 3;
+      display: grid;
+      grid-template-columns: repeat(var(--rank-size), minmax(0, 1fr));
+      gap: 6px;
+    }
+
+    .problem-cell {
+      position: relative;
+      aspect-ratio: 1;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: radial-gradient(circle at top, rgba(255, 255, 255, 0.08), rgba(12, 20, 40, 0.9));
+      color: #f3f6ff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(18px, 5vw, 28px);
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .problem-cell:active {
+      transform: scale(0.96);
+    }
+
+    .problem-cell.locked {
+      cursor: not-allowed;
+      opacity: 0.3;
+    }
+
+    .ghost {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      color: #d6e0ff;
+      border-radius: 14px;
+      padding: 10px 14px;
+      font-size: clamp(13px, 3vw, 16px);
+    }
+
+    .block {
+      width: 100%;
+      margin-top: 16px;
+    }
+
+    .image-list {
+      display: none;
+      margin-top: 12px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: rgba(9, 14, 28, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: #cfd9ff;
+      font-size: clamp(14px, 3.5vw, 17px);
+      text-align: left;
+    }
+
+    .image-list.active {
+      display: block;
+    }
+
+    .image-list ul {
+      padding-left: 18px;
+      margin: 0;
+      list-style: decimal;
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .hint {
+      margin: 16px 0 6px;
+      color: #8fa0c9;
+      font-size: clamp(14px, 3.4vw, 16px);
+    }
+
+    .puzzle-wrapper {
+      width: min(90vw, 420px);
+      height: min(90vw, 420px);
+      margin: 10px auto 0;
+      position: relative;
+    }
+
+    .completion {
+      position: absolute;
+      inset: 8px;
+      display: none;
+      border-radius: 16px;
+      background: rgba(5, 10, 26, 0.92);
+      border: 2px solid rgba(79, 233, 129, 0.45);
+      box-shadow: 0 18px 32px rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(4px);
+      padding: 18px;
+      color: #e9fff0;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+
+    .completion.active {
+      display: flex;
+    }
+
+    .completion-content {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .completion-message {
+      font-size: clamp(22px, 5.5vw, 30px);
+      font-weight: 700;
+      color: #4fe981;
+      margin: 0;
+      text-shadow: 0 0 16px rgba(79, 233, 129, 0.5);
+    }
+
+    .completion-image {
+      width: 90%;
+      aspect-ratio: 1 / 1;
+      border-radius: 14px;
+      background: #0c152b center / cover no-repeat;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    }
+
+    .completion-buttons {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 10px;
+      width: 100%;
+    }
+
+    .completion-buttons button {
+      width: 100%;
+      border-radius: 12px;
+      background: linear-gradient(120deg, #1e5fff, #43a4ff);
+      color: #fff;
+      font-size: clamp(16px, 4vw, 20px);
+    }
+
+    .completion-buttons button:last-child {
+      background: #192542;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    #status {
+      min-height: 32px;
+      margin-bottom: 8px;
+      font-size: clamp(18px, 4.5vw, 22px);
+      font-weight: 700;
+      color: #4fe981;
+      text-shadow: 0 0 12px rgba(79, 233, 129, 0.4);
+    }
+
+    .puzzle {
+      --grid-size: 4;
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-columns: repeat(var(--grid-size), 1fr);
+      gap: 2px;
+      border-radius: 18px;
+      overflow: hidden;
+      background: #121828;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+      touch-action: manipulation;
+    }
+
+    .piece {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      border: none;
+      padding: 0;
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-color: #0f1727;
+      border-radius: 6px;
+      outline: none;
+      box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.28);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .piece:focus-visible {
+      box-shadow: 0 0 0 3px rgba(11, 130, 255, 0.6);
+    }
+
+    .piece.selected {
+      transform: scale(1.02);
+      box-shadow: 0 0 0 3px rgba(11, 130, 255, 0.8);
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section id="opening" class="screen active">
+      <p class="eyebrow">SWIPE QUEST</p>
+      <img src="./title_swipe_quest.png?v=2" alt="Skyline Puzzle Quest" class="title-image" />
+
+      <div class="rule-card">
+        <h2>ルール</h2>
+        <ol>
+          <li>ピースをタップで選択し、入れ替えたい位置のピースを続けてタップ</li>
+          <li>ピースを正しく並べてクリアを目指そう</li>
+        </ol>
+      </div>
+
+      <div class="difficulty-section">
+        <h2>難易度設定</h2>
+
+        <div class="difficulty-tabs" role="tablist">
+          <button type="button" class="rank-button" data-difficulty="easy">
+            <span>EASY</span>
+            <span>3×3</span>
+          </button>
+          <button type="button" class="rank-button" data-difficulty="normal">
+            <span>NORMAL</span>
+            <span>4×4</span>
+          </button>
+          <button type="button" class="rank-button" data-difficulty="hard">
+            <span>HARD</span>
+            <span>5×5</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section id="difficulty-screen" class="screen" aria-live="polite">
+      <div class="top-bar">
+        <div>
+          <p class="eyebrow">RANK</p>
+          <h2 id="difficulty-title">EASY 3×3</h2>
+        </div>
+        <button type="button" id="difficulty-home" class="ghost">ランク一覧へ戻る</button>
+      </div>
+      <p id="difficulty-message" class="hint">ランクを選択して問題ページを開いてください。</p>
+      <div id="difficulty-grid" class="problem-grid" aria-label="問題選択マス"></div>
+    </section>
+    </section>
+
+    <section id="play" class="screen" aria-live="polite">
+      <div class="top-bar">
+        <div>
+          <p class="eyebrow">STAGE</p>
+          <h2 id="level-label">EASY 3×3</h2>
+        </div>
+        <button type="button" id="back" class="ghost">問題選択に戻る</button>
+      </div>
+      <p class="hint">2つのピースを順番にタップして入れ替えよう</p>
+      <div id="status"></div>
+      <div class="puzzle-wrapper">
+        <div id="puzzle" class="puzzle" aria-label="パズルエリア"></div>
+        <div id="completion-panel" class="completion" aria-live="polite">
+          <div class="completion-content">
+            <p id="completion-message" class="completion-message"></p>
+            <div id="completion-image" class="completion-image" aria-hidden="true"></div>
+            <div class="completion-buttons">
+              <button type="button" id="next-problem">次の問題へ</button>
+              <button type="button" id="completion-home">ホームに戻る</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const IMAGE_SOURCES = {
+      easy: "./swipe_quest_pictures_easy/",
+      normal: "./swipe_quest_pictures_normal/",
+      hard: "./swipe_quest_pictures_hard/",
+    };
+
+    const DIFFICULTIES = [
+      { id: "easy", label: "EASY", size: 3, description: "ピース 3×3 ／ 基本の難易度" },
+      { id: "normal", label: "NORMAL", size: 4, description: "ピース 4×4 ／ 少しむずかしい" },
+      { id: "hard", label: "HARD", size: 5, description: "ピース 5×5 ／ じっくり挑戦" },
+    ];
+
+    const puzzle = document.getElementById("puzzle");
+    const status = document.getElementById("status");
+    const levelLabel = document.getElementById("level-label");
+    const openingScreen = document.getElementById("opening");
+    const playScreen = document.getElementById("play");
+    const backButton = document.getElementById("back");
+    const rankButtons = document.querySelectorAll(".rank-button");
+    const difficultyScreen = document.getElementById("difficulty-screen");
+    const difficultyTitle = document.getElementById("difficulty-title");
+    const difficultyMessage = document.getElementById("difficulty-message");
+      const difficultyGrid = document.getElementById("difficulty-grid");
+    const difficultyHomeButton = document.getElementById("difficulty-home");
+    const completionPanel = document.getElementById("completion-panel");
+    const completionMessage = document.getElementById("completion-message");
+    const completionImage = document.getElementById("completion-image");
+    const nextProblemButton = document.getElementById("next-problem");
+    const completionHomeButton = document.getElementById("completion-home");
+
+    const difficultyBySize = new Map(DIFFICULTIES.map((d) => [d.size, d]));
+    const difficultyById = new Map(DIFFICULTIES.map((d) => [d.id, d]));
+    const manifestInfo = new Map(
+      DIFFICULTIES.map(({ id }) => [
+        id,
+        { files: [], imagesByNumber: new Map(), loaded: false, loading: false },
+      ])
+    );
+
+    let currentImage = "";
+    let currentProblemNumber = null;
+    let currentDifficultyId = null;
+    let SIZE = 3;
+    let firstSelected = null;
+    let activeDifficultyId = null;
+
+    backButton.addEventListener("click", () => showProblemSelection());
+
+    if (completionHomeButton) {
+      completionHomeButton.addEventListener("click", () => navigateHome());
+    }
+
+    if (difficultyHomeButton) {
+      difficultyHomeButton.addEventListener("click", () => showRankSelection());
+    }
+
+    if (nextProblemButton) {
+      nextProblemButton.addEventListener("click", () => goToNextProblem());
+    }
+
+    rankButtons.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        openDifficulty(tab.dataset.difficulty);
+      });
+    });
+
+      if (difficultyGrid) {
+        difficultyGrid.addEventListener("click", (event) => {
+          const cell = event.target.closest(".problem-cell");
+          if (!cell) {
+            return;
+          }
+
+          const size = Number(cell.dataset.size);
+          const problemNumber = Number(cell.dataset.problemNumber);
+          const difficultyId = cell.dataset.difficulty;
+          handleProblemSelection(size, problemNumber, difficultyId);
+        });
+      }
+
+    setDifficultyMessage("ランクを選択してください。");
+
+    function handleProblemSelection(size, problemNumber, difficultyIdOverride) {
+      const difficulty = difficultyBySize.get(size);
+      const difficultyId = difficultyIdOverride || difficulty?.id || currentDifficultyId;
+      if (!ensureManifestReady(difficultyId)) {
+        return;
+      }
+
+      const imageFile = chooseImageForNumber(problemNumber, difficultyId);
+
+      if (!imageFile) {
+        setDifficultyMessage(`問題 ${problemNumber}: 画像無し`);
+        return;
+      }
+
+      if (difficultyId) {
+        setActiveDifficulty(difficultyId);
+      }
+
+      currentImage = imageFile;
+      currentProblemNumber = problemNumber;
+      currentDifficultyId = difficultyId || currentDifficultyId;
+      const difficultyLabel = difficulty ? difficulty.label : `${size}×${size}`;
+      setDifficultyMessage(`${difficultyLabel} 問題 ${problemNumber} を読み込みます`);
+      beginStage(size);
+    }
+
+    function beginStage(newSize) {
+      SIZE = newSize;
+      const difficulty = difficultyBySize.get(newSize);
+      const labelBase = difficulty ? `${difficulty.label} ${newSize}×${newSize}` : `${newSize}×${newSize}`;
+      const problemText = currentProblemNumber ? ` | 問題 ${currentProblemNumber}` : "";
+      levelLabel.textContent = `${labelBase}${problemText}`;
+      openingScreen.classList.remove("active");
+      if (difficultyScreen) {
+        difficultyScreen.classList.remove("active");
+      }
+      playScreen.classList.add("active");
+      setupGame();
+    }
+
+    function setupGame() {
+      firstSelected = null;
+      status.textContent = "";
+      hideCompletionPanel();
+      puzzle.style.setProperty("--grid-size", SIZE);
+      puzzle.innerHTML = "";
+      const total = SIZE * SIZE;
+      const pieces = Array.from({ length: total }, (_, index) => createPiece(index));
+      pieces.sort(() => Math.random() - 0.5).forEach((piece) => puzzle.appendChild(piece));
+    }
+
+    function createPiece(index) {
+      const piece = document.createElement("button");
+      piece.type = "button";
+      piece.className = "piece";
+      piece.dataset.index = index;
+      piece.setAttribute("aria-label", `ピース ${index + 1}`);
+      piece.style.backgroundImage = currentImage ? `url('${getImageUrl()}')` : "none";
+      piece.style.backgroundSize = `${SIZE * 100}% ${SIZE * 100}%`;
+      const row = Math.floor(index / SIZE);
+      const col = index % SIZE;
+      const percentX = SIZE === 1 ? 0 : (col / (SIZE - 1)) * 100;
+      const percentY = SIZE === 1 ? 0 : (row / (SIZE - 1)) * 100;
+      piece.style.backgroundPosition = `${percentX}% ${percentY}%`;
+      piece.addEventListener("click", () => handlePieceClick(piece));
+      return piece;
+    }
+
+    function handlePieceClick(piece) {
+      if (!playScreen.classList.contains("active")) {
+        return;
+      }
+
+      if (firstSelected === piece) {
+        piece.classList.remove("selected");
+        firstSelected = null;
+        return;
+      }
+
+      if (!firstSelected) {
+        firstSelected = piece;
+        piece.classList.add("selected");
+        return;
+      }
+
+      swapPieces(firstSelected, piece);
+      firstSelected.classList.remove("selected");
+      firstSelected = null;
+      checkCompletion();
+    }
+
+    function swapPieces(a, b) {
+      const placeholder = document.createElement("div");
+      puzzle.replaceChild(placeholder, a);
+      puzzle.replaceChild(a, b);
+      puzzle.replaceChild(b, placeholder);
+    }
+
+    function checkCompletion() {
+      const solved = Array.from(puzzle.children).every(
+        (piece, index) => Number(piece.dataset.index) === index
+      );
+
+      if (solved) {
+        status.textContent = "";
+        showCompletionPanel();
+      }
+    }
+
+    function getImageUrl() {
+      if (!currentDifficultyId) {
+        return "";
+      }
+      return `${IMAGE_SOURCES[currentDifficultyId] || ""}${currentImage}`;
+    }
+
+    async function loadImageManifest(difficultyId) {
+      const state = manifestInfo.get(difficultyId);
+      const basePath = IMAGE_SOURCES[difficultyId];
+      if (!state || !basePath || state.loading) {
+        return;
+      }
+
+      state.loading = true;
+      try {
+        const response = await fetch(`${basePath}manifest.json`, { cache: "no-store" });
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        const data = await response.json();
+        const files = Array.isArray(data?.images) ? data.images : [];
+        prepareImageData(difficultyId, files);
+        state.loaded = true;
+        setDifficultyMessage(
+          `${difficultyById.get(difficultyId)?.label || difficultyId} の画像を ${files.length} 件読み込みました。`
+        );
+      } catch (error) {
+        console.error("画像 manifest の読み込みに失敗しました:", error);
+        state.loaded = false;
+        state.files = [];
+        state.imagesByNumber = new Map();
+        setDifficultyMessage("画像リストの読み込みに失敗しました。");
+      } finally {
+        state.loading = false;
+      }
+    }
+
+    function ensureManifestReady(difficultyId) {
+      if (!difficultyId) {
+        setDifficultyMessage("ランクを選択してください。");
+        return false;
+      }
+
+      const state = manifestInfo.get(difficultyId);
+      if (!state) {
+        setDifficultyMessage("このランクの設定が見つかりません。");
+        return false;
+      }
+
+      if (!state.loaded) {
+        setDifficultyMessage("画像リストを読み込み中です...");
+        if (!state.loading) {
+          loadImageManifest(difficultyId);
+        }
+        return false;
+      }
+
+      if (!state.files.length) {
+        setDifficultyMessage("このランクの画像が見つかりません。");
+        return false;
+      }
+
+      return true;
+    }
+
+    function chooseImageForNumber(problemNumber, difficultyId) {
+      const state = manifestInfo.get(difficultyId);
+      if (!state) {
+        return null;
+      }
+      const files = state.imagesByNumber.get(problemNumber);
+      return files && files.length ? files[0] : null;
+    }
+
+    function prepareImageData(difficultyId, files) {
+      const state = manifestInfo.get(difficultyId);
+      if (!state) {
+        return;
+      }
+
+      state.files = files;
+      const map = new Map();
+      const numberRegex = /^(\d+)_/;
+
+      files.forEach((file) => {
+        const match = numberRegex.exec(file);
+        if (!match) {
+          return;
+        }
+        const number = Number(match[1]);
+        if (!map.has(number)) {
+          map.set(number, []);
+        }
+        map.get(number).push(file);
+      });
+
+      state.imagesByNumber = map;
+      if (activeDifficultyId === difficultyId) {
+        renderDifficultyGrid();
+      }
+    }
+
+    function openDifficulty(id) {
+      const difficulty = setActiveDifficulty(id);
+      if (!difficulty) {
+        setDifficultyMessage("ランクが選択できませんでした。");
+        return;
+      }
+      currentDifficultyId = id;
+
+      if (!ensureManifestReady(difficulty.id)) {
+        loadImageManifest(difficulty.id);
+      }
+
+      renderDifficultyGrid();
+      setDifficultyMessage(`${difficulty.label} のマスから問題を選択してください。`);
+      openingScreen.classList.remove("active");
+      if (difficultyScreen) {
+        difficultyScreen.classList.add("active");
+      }
+    }
+
+    function renderDifficultyGrid() {
+      if (!difficultyGrid) {
+        return;
+      }
+
+      const difficulty = difficultyById.get(activeDifficultyId);
+      difficultyGrid.innerHTML = "";
+
+      if (!difficulty) {
+        difficultyGrid.style.removeProperty("--rank-size");
+        return;
+      }
+
+      difficultyGrid.style.setProperty("--rank-size", difficulty.size);
+      const totalProblems = getProblemCountForSize(difficulty.size);
+      for (let i = 1; i <= totalProblems; i += 1) {
+        const cell = document.createElement("button");
+        cell.type = "button";
+        cell.className = "problem-cell";
+        cell.dataset.size = difficulty.size;
+        cell.dataset.problemNumber = i;
+        cell.dataset.difficulty = difficulty.id;
+        cell.textContent = `${i}`;
+        difficultyGrid.appendChild(cell);
+      }
+    }
+
+    function setActiveDifficulty(id) {
+      if (!id) {
+        activeDifficultyId = null;
+        rankButtons.forEach((tab) => tab.classList.remove("active"));
+        updateDifficultyTitle();
+        renderDifficultyGrid();
+        return null;
+      }
+
+      activeDifficultyId = id;
+      rankButtons.forEach((tab) => {
+        tab.classList.toggle("active", tab.dataset.difficulty === activeDifficultyId);
+      });
+      updateDifficultyTitle();
+      renderDifficultyGrid();
+      return difficultyById.get(activeDifficultyId) || null;
+    }
+
+    function updateDifficultyTitle() {
+      if (!difficultyTitle) {
+        return;
+      }
+
+      const difficulty = difficultyById.get(activeDifficultyId);
+      difficultyTitle.textContent = difficulty
+        ? `${difficulty.label} ${difficulty.size}×${difficulty.size}`
+        : "ランクを選択";
+    }
+
+    function goToNextProblem() {
+      const difficulty = difficultyBySize.get(SIZE);
+      const difficultyId = currentDifficultyId || difficulty?.id || activeDifficultyId;
+      if (!ensureManifestReady(difficultyId)) {
+        return;
+      }
+
+      if (!currentProblemNumber) {
+        setDifficultyMessage("先に問題を選択してください。");
+        return;
+      }
+
+      const nextNumber = findNextAvailableProblem(
+        currentProblemNumber + 1,
+        getProblemCountForSize(SIZE),
+        difficultyId
+      );
+      if (!nextNumber) {
+        setDifficultyMessage("次の問題の画像が見つかりません。");
+        return;
+      }
+
+      hideCompletionPanel();
+      handleProblemSelection(SIZE, nextNumber, difficultyId);
+    }
+
+    function findNextAvailableProblem(startNumber, limit, difficultyId) {
+      const state = manifestInfo.get(difficultyId);
+      if (!state) {
+        return null;
+      }
+
+      for (let i = startNumber; i <= limit; i += 1) {
+        if (state.imagesByNumber.get(i)?.length) {
+          return i;
+        }
+      }
+      return null;
+    }
+
+    function showCompletionPanel() {
+      if (!completionPanel) {
+        return;
+      }
+
+      completionPanel.classList.add("active");
+      if (completionMessage) {
+        completionMessage.textContent = "正解！クリア！";
+      }
+      if (completionImage) {
+        completionImage.style.backgroundImage = currentImage ? `url('${getImageUrl()}')` : "none";
+      }
+    }
+
+    function hideCompletionPanel() {
+      if (!completionPanel) {
+        return;
+      }
+
+      completionPanel.classList.remove("active");
+      if (completionMessage) {
+        completionMessage.textContent = "";
+      }
+      if (completionImage) {
+        completionImage.style.backgroundImage = "none";
+      }
+    }
+
+    function navigateHome() {
+      playScreen.classList.remove("active");
+      showRankSelection();
+      status.textContent = "";
+      puzzle.innerHTML = "";
+      firstSelected = null;
+      currentProblemNumber = null;
+      currentDifficultyId = null;
+      hideCompletionPanel();
+    }
+
+    function showRankSelection() {
+      setActiveDifficulty(null);
+      openingScreen.classList.add("active");
+      if (difficultyScreen) {
+        difficultyScreen.classList.remove("active");
+      }
+      setDifficultyMessage("ランクを選択してください。");
+    }
+
+    function showProblemSelection() {
+      playScreen.classList.remove("active");
+      if (difficultyScreen) {
+        difficultyScreen.classList.add("active");
+      }
+      const difficulty = difficultyById.get(activeDifficultyId);
+      setDifficultyMessage(
+        difficulty ? `${difficulty.label} のマスから問題を選択してください。` : "ランクを選択してください。"
+      );
+    }
+
+    function setDifficultyMessage(text) {
+      if (difficultyMessage) {
+        difficultyMessage.textContent = text;
+      }
+    }
+
+    function getProblemCountForSize(size) {
+      return size * size;
+    }
+  </script>
+</body>
+</html>
