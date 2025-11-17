@@ -247,6 +247,7 @@
       border-radius: 14px;
       padding: 10px 14px;
       font-size: clamp(13px, 3vw, 16px);
+      white-space: nowrap;
     }
 
     .block {
@@ -342,14 +343,15 @@
     }
 
     .completion-buttons {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      display: flex;
       gap: 10px;
       width: 100%;
+      flex-wrap: wrap;
     }
 
     .completion-buttons button {
-      width: 100%;
+      flex: 1 1 0;
+      min-width: 0;
       border-radius: 12px;
       background: linear-gradient(120deg, #1e5fff, #43a4ff);
       color: #fff;
@@ -521,6 +523,7 @@
       ])
     );
     const solvedProblems = new Map(DIFFICULTIES.map(({ id }) => [id, new Set()]));
+    const SOLVED_STORAGE_KEY = "swipeQuestSolved";
 
     let currentImage = "";
     let currentProblemNumber = null;
@@ -564,6 +567,7 @@
       }
 
     setDifficultyMessage("ランクを選択してください。");
+    loadSolvedProgress();
 
     function handleProblemSelection(size, problemNumber, difficultyIdOverride) {
       const difficulty = difficultyBySize.get(size);
@@ -909,6 +913,7 @@
 
       solvedSet.add(problemNumber);
       updateProblemCellState(difficultyId, problemNumber);
+      saveSolvedProgress();
     }
 
     function updateProblemCellState(difficultyId, problemNumber) {
@@ -924,6 +929,33 @@
       }
     }
 
+    function loadSolvedProgress() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(SOLVED_STORAGE_KEY) || "{}");
+        DIFFICULTIES.forEach(({ id }) => {
+          const entries = Array.isArray(saved?.[id]) ? saved[id] : [];
+          solvedProblems.set(
+            id,
+            new Set(entries.map((num) => Number(num)).filter((num) => Number.isFinite(num)))
+          );
+        });
+      } catch (error) {
+        console.warn("クリア状況の読み込みに失敗しました:", error);
+      }
+    }
+
+    function saveSolvedProgress() {
+      try {
+        const payload = {};
+        solvedProblems.forEach((set, id) => {
+          payload[id] = Array.from(set);
+        });
+        localStorage.setItem(SOLVED_STORAGE_KEY, JSON.stringify(payload));
+      } catch (error) {
+        console.warn("クリア状況の保存に失敗しました:", error);
+      }
+    }
+
     function showCompletionPanel() {
       if (!completionPanel) {
         return;
@@ -931,7 +963,7 @@
 
       completionPanel.classList.add("active");
       if (completionMessage) {
-        completionMessage.textContent = "正解！クリア！";
+        completionMessage.textContent = "クリア！";
       }
       if (completionImage) {
         completionImage.style.backgroundImage = currentImage ? `url('${getImageUrl()}')` : "none";
