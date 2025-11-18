@@ -398,6 +398,7 @@
       outline: none;
       box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.28);
       transition: transform 0.15s ease, box-shadow 0.15s ease;
+      touch-action: none;
     }
 
     .piece:focus-visible {
@@ -419,7 +420,7 @@
       <div class="rule-card">
         <h2>ルール</h2>
         <ol>
-          <li>ピースをタップで選択し、入れ替えたい位置のピースを続けてタップ</li>
+          <li>ピースをドラッグして動かし、入れ替えたい位置で指を離す</li>
           <li>ピースを正しく並べてクリアを目指そう</li>
         </ol>
       </div>
@@ -465,7 +466,7 @@
         </div>
         <button type="button" id="back" class="ghost">問題選択に戻る</button>
       </div>
-      <p class="hint">2つのピースを順番にタップして入れ替えよう</p>
+      <p class="hint">ピースをスワイプで動かして入れ替えよう</p>
       <div id="status"></div>
       <div class="puzzle-wrapper">
         <div id="puzzle" class="puzzle" aria-label="パズルエリア"></div>
@@ -529,7 +530,8 @@
     let currentProblemNumber = null;
     let currentDifficultyId = null;
     let SIZE = 3;
-    let firstSelected = null;
+    let draggingPiece = null;
+    let draggingPointerId = null;
     let activeDifficultyId = null;
 
     backButton.addEventListener("click", () => showProblemSelection());
@@ -610,7 +612,6 @@
     }
 
     function setupGame() {
-      firstSelected = null;
       status.textContent = "";
       hideCompletionPanel();
       puzzle.style.setProperty("--grid-size", SIZE);
@@ -633,31 +634,67 @@
       const percentX = SIZE === 1 ? 0 : (col / (SIZE - 1)) * 100;
       const percentY = SIZE === 1 ? 0 : (row / (SIZE - 1)) * 100;
       piece.style.backgroundPosition = `${percentX}% ${percentY}%`;
-      piece.addEventListener("click", () => handlePieceClick(piece));
+      piece.addEventListener("pointerdown", (event) => beginPieceDrag(event, piece));
+      piece.addEventListener("pointerup", endPieceDrag);
+      piece.addEventListener("pointercancel", cancelPieceDrag);
       return piece;
     }
 
-    function handlePieceClick(piece) {
+    function beginPieceDrag(event, piece) {
       if (!playScreen.classList.contains("active")) {
         return;
       }
 
-      if (firstSelected === piece) {
-        piece.classList.remove("selected");
-        firstSelected = null;
+      event.preventDefault();
+      draggingPiece = piece;
+      draggingPointerId = event.pointerId;
+      piece.setPointerCapture(event.pointerId);
+      piece.classList.add("selected");
+    }
+
+    function endPieceDrag(event) {
+      if (!draggingPiece || event.pointerId !== draggingPointerId) {
         return;
       }
 
-      if (!firstSelected) {
-        firstSelected = piece;
-        piece.classList.add("selected");
+      const source = draggingPiece;
+      finishPieceDrag(event);
+      source.classList.remove("selected");
+    }
+
+    function cancelPieceDrag(event) {
+      if (!draggingPiece || event.pointerId !== draggingPointerId) {
         return;
       }
 
-      swapPieces(firstSelected, piece);
-      firstSelected.classList.remove("selected");
-      firstSelected = null;
-      checkCompletion();
+      const source = draggingPiece;
+      finishPieceDrag();
+      source.classList.remove("selected");
+    }
+
+    function finishPieceDrag(event) {
+      const source = draggingPiece;
+      if (!source) {
+        return;
+      }
+
+      try {
+        source.releasePointerCapture(draggingPointerId);
+      } catch (error) {
+        // ignore
+      }
+
+      if (event) {
+        const targetElement = document.elementFromPoint(event.clientX, event.clientY);
+        const targetPiece = targetElement?.closest(".piece");
+        if (targetPiece && targetPiece !== source) {
+          swapPieces(source, targetPiece);
+          checkCompletion();
+        }
+      }
+
+      draggingPiece = null;
+      draggingPointerId = null;
     }
 
     function swapPieces(a, b) {
@@ -989,7 +1026,6 @@
       showRankSelection();
       status.textContent = "";
       puzzle.innerHTML = "";
-      firstSelected = null;
       currentProblemNumber = null;
       currentDifficultyId = null;
       hideCompletionPanel();
